@@ -7,30 +7,23 @@ import traceback
 import threading
 import multiprocessing
 
+
 ERROR = None
 try:
-    import core
+    from core.core.worker.variables import MOD_FILE_FORMAT, MODLOADER_CACHE_PATH
 except ImportError as e:
-    # Java not found error
-    core = None
-
-    # If other error
-    if e.msg != "Java not found!":
-        ERROR = sys.exc_info()
-
+    ERROR = sys.exc_info()
 from client import Arguments, Commands, CONFIG_FILE, CONFIG, SOCKET_PORT, MODLOADER_CLIENT
 
 from ui.utils.systemdialog import Error
 
 FROZEN = getattr(sys, 'frozen', False)
 
-MOD_FILE_FORMAT = core.MOD_FILE_FORMAT if core is not None else ""
 FILE_DESCRIPTION = "Brawlhalla Mod"
 FILE_ICON = "file_icon.ico"
 
-if core is not None:
-    os.environ["CLIENT_PATH"] = os.path.join(core.MODLOADER_CACHE_PATH, MODLOADER_CLIENT)
-    os.environ["FILE_ICON"] = os.path.join(core.MODLOADER_CACHE_PATH, FILE_ICON)
+os.environ["CLIENT_PATH"] = os.path.join(MODLOADER_CACHE_PATH, MODLOADER_CLIENT)
+os.environ["FILE_ICON"] = os.path.join(MODLOADER_CACHE_PATH, FILE_ICON)
 
 
 def _bootstrap(self, parent_sentinel=None):
@@ -88,7 +81,7 @@ multiprocessing.Process._bootstrap = _bootstrap
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     try:
-        import pyi_splash
+        import pyi_splash # type: ignore
         pyi_splash.close()
     except:
         pass
@@ -120,14 +113,14 @@ def GetLocalPath():
 
 
 def InstallClient():
-    configPath = os.path.join(core.MODLOADER_CACHE_PATH, CONFIG_FILE)
+    configPath = os.path.join(MODLOADER_CACHE_PATH, CONFIG_FILE)
     if os.path.exists(configPath):
         with open(configPath, "r") as file:
             config = json.loads(file.read())
     else:
         config = CONFIG
 
-    clientPath = os.path.join(core.MODLOADER_CACHE_PATH, MODLOADER_CLIENT)
+    clientPath = os.path.join(MODLOADER_CACHE_PATH, MODLOADER_CLIENT)
 
     if FROZEN:
         origClientPath = os.path.join(GetLocalPath(), MODLOADER_CLIENT)
@@ -148,7 +141,7 @@ def InstallClient():
     with open(configPath, "w") as file:
         file.write(json.dumps(config))
 
-    iconPath = os.path.join(core.MODLOADER_CACHE_PATH, FILE_ICON)
+    iconPath = os.path.join(MODLOADER_CACHE_PATH, FILE_ICON)
     if not os.path.exists(iconPath):
         with open(iconPath, "wb") as icon:
             with open(os.path.join(GetLocalPath(), FILE_ICON), "rb") as file:
@@ -179,7 +172,7 @@ def CheckFileRegistry():
                 winreg.QueryValueEx(fileformat, None)[0] != _format
                 or
                 winreg.QueryValueEx(shell_open_command, None)[0] !=
-                f"{os.path.join(core.MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.FILE} \"%1\""
+                f"{os.path.join(MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.FILE} \"%1\""
         ):
             winreg.CloseKey(shell_open_command)
             winreg.CloseKey(fileformat)
@@ -211,7 +204,7 @@ def InstallFileRegistry():
     shell_open = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, f"{_format}\shell\open")
     shell_open_command = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, f"{_format}\shell\open\command")
     winreg.SetValueEx(shell_open_command, None, 0, winreg.REG_SZ,
-                      f"{os.path.join(core.MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.FILE} \"%1\"")
+                      f"{os.path.join(MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.FILE} \"%1\"")
 
     winreg.CloseKey(fileformat)
     winreg.CloseKey(main)
@@ -228,7 +221,7 @@ def CheckUrlRegistry():
         shell_open_command = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"{MOD_FILE_FORMAT}\shell\open\command")
 
         if winreg.QueryValueEx(shell_open_command, None)[0] != \
-                f"{os.path.join(core.MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.URL} \"%1\"":
+                f"{os.path.join(MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.URL} \"%1\"":
             winreg.CloseKey(shell_open_command)
             return False
 
@@ -253,7 +246,7 @@ def InstallUrlRegistry():
     shell_open = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, f"{MOD_FILE_FORMAT}\shell\open")
     shell_open_command = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, f"{MOD_FILE_FORMAT}\shell\open\command")
     winreg.SetValueEx(shell_open_command, None, 0, winreg.REG_SZ,
-                      f"{os.path.join(core.MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.URL} \"%1\"")
+                      f"{os.path.join(MODLOADER_CACHE_PATH, MODLOADER_CLIENT)} {Arguments.URL} \"%1\"")
 
     winreg.CloseKey(main)
     winreg.CloseKey(default_icon)
@@ -293,12 +286,7 @@ def MLServer(mlserver: socket, app):
 
 if __name__ == "__main__" and "--multiprocessing-fork" not in sys.argv:
     os.chdir(os.path.split(sys.argv[0])[0])
-
-    if core is None:
-        from main import RunApp
-
-        RunApp()
-
+    
     import argparse
 
     parser = argparse.ArgumentParser()

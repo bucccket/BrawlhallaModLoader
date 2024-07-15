@@ -16,20 +16,23 @@ import encodings.idna
 
 from typing import List
 
-try:
-    import core
-    from core import NotificationType, Notification, Environment, CORE_VERSION
 
+try:
+    from core.core.exceptions.ffdec import JavaNotFoundException
     import core.core.ffdec
+    from core.core.worker.variables import MOD_FILE_FORMAT
+    from core.core.notifications import NotificationType, Notification
+    from core.core.commands import Environment
+    from core.core.controller.controller import Controller
 
     JAVA_FOUND = True
 except ImportError as e:
     NotificationType = Notification = Environment = CORE_VERSION = None
+    sys.excepthook(*sys.exc_info())
+except JavaNotFoundException:
+    NotificationType = Notification = Environment = CORE_VERSION = None
+    JAVA_FOUND = False
 
-    if e.msg == "Java not found!":
-        JAVA_FOUND = False
-    else:
-        sys.excepthook(*sys.exc_info())
 from PySide6.QtCore import QSize, QTranslator, QLocale, QTimer, Signal
 from PySide6.QtGui import QIcon, QFontDatabase
 from PySide6.QtWidgets import QMainWindow, QApplication
@@ -58,7 +61,8 @@ PROGRAM_NAME = "Brawlhalla ModLoader"
 def InitWindowSetText(text):
     if getattr(sys, "frozen", False):
         try:
-            import pyi_splash
+            # suppress import error in pylance
+            import pyi_splash # type: ignore
             pyi_splash.update_text(text)
         except:
             pass
@@ -67,7 +71,7 @@ def InitWindowSetText(text):
 def InitWindowClose():
     if getattr(sys, "frozen", False):
         try:
-            import pyi_splash
+            import pyi_splash # type: ignore
             pyi_splash.update_text("application")
             pyi_splash.close()
         except:
@@ -218,7 +222,7 @@ class ModLoader(QMainWindow):
     def runController(self):
         self.loading.setText("Loading ModLoader Core")
 
-        self.controller = core.Controller()
+        self.controller = Controller()
         self.controller.setModsPath(self.modsPath)
         self.controller.reloadMods()
         self.controller.getModsData()
@@ -692,7 +696,7 @@ class ModLoader(QMainWindow):
             if _signature.startswith(b"7z"):
                 with py7zr.SevenZipFile(archivePath) as mod7z:
                     for file in mod7z.getnames():
-                        if file.endswith(f".{core.MOD_FILE_FORMAT}"):
+                        if file.endswith(f".{MOD_FILE_FORMAT}"):
                             self.progressDialog.setContent(f"Extract: '{file}'")
                             QApplication.processEvents()
                             mod7z.extract(self.modsPath, [file])
@@ -700,7 +704,7 @@ class ModLoader(QMainWindow):
             elif _signature.startswith(b"Rar"):
                 with rarfile.RarFile(archivePath) as modRar:
                     for file in modRar.namelist():
-                        if file.endswith(f".{core.MOD_FILE_FORMAT}"):
+                        if file.endswith(f".{MOD_FILE_FORMAT}"):
                             self.progressDialog.setContent(f"Extract: '{file}'")
                             QApplication.processEvents()
                             modRar.extract(file, self.modsPath)
@@ -708,7 +712,7 @@ class ModLoader(QMainWindow):
             elif _signature.startswith(b"PK"):
                 with zipfile.ZipFile(archivePath) as modZip:
                     for file in modZip.namelist():
-                        if file.endswith(f".{core.MOD_FILE_FORMAT}"):
+                        if file.endswith(f".{MOD_FILE_FORMAT}"):
                             self.progressDialog.setContent(f"Extract: '{file}'")
                             QApplication.processEvents()
                             modZip.extract(file, self.modsPath)
